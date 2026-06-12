@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neon Flappy Hub</title>
+
+<style>
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial;
+}
+
+body{
+height:100vh;
+overflow:hidden;
+display:flex;
+justify-content:center;
+align-items:center;
+background:linear-gradient(-45deg,#0f0c29,#302b63,#24243e,#000);
+background-size:400% 400%;
+animation:bg 10s ease infinite;
+}
+
+@keyframes bg{
+0%{background-position:0% 50%;}
+50%{background-position:100% 50%;}
+100%{background-position:0% 50%;}
+}
+
+/* HUD */
+#hud{
+position:fixed;
+top:10px;
+left:10px;
+color:#0ff;
+font-size:16px;
+z-index:10;
+}
+
+/* TOP BUTTONS */
+#topBtns{
+position:fixed;
+top:10px;
+right:10px;
+z-index:15;
+display:flex;
+gap:10px;
+}
+
+#topBtns button{
+padding:8px 12px;
+border:none;
+border-radius:8px;
+background:#0ff;
+font-weight:bold;
+cursor:pointer;
+}
+
+/* CANVAS */
+canvas{
+background:radial-gradient(circle,#05001a,#000);
+border:2px solid #0ff;
+box-shadow:0 0 25px #0ff;
+width:95vw;
+max-width:420px;
+aspect-ratio:2/3;
+}
+
+/* SCREENS */
+.screen{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.9);
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+color:white;
+z-index:20;
+}
+
+h1{
+color:#0ff;
+text-shadow:0 0 10px #0ff;
+margin-bottom:10px;
+}
+
+/* SKINS */
+.skins{
+display:flex;
+gap:10px;
+margin:15px;
+}
+
+.skin{
+width:40px;
+height:40px;
+border-radius:50%;
+cursor:pointer;
+border:2px solid white;
+transition:0.2s;
+}
+
+.skin.active{
+transform:scale(1.25);
+border:2px solid #0ff;
+box-shadow:0 0 15px #0ff;
+}
+
+/* BUTTON */
+button{
+padding:10px 20px;
+margin-top:10px;
+border:none;
+border-radius:10px;
+background:#0ff;
+font-weight:bold;
+cursor:pointer;
+}
+
+#result{
+font-size:18px;
+margin-top:10px;
+color:#fff;
+text-align:center;
+}
+
+/* SKIN MSG */
+#skinMsg{
+position:fixed;
+bottom:20px;
+left:50%;
+transform:translateX(-50%);
+background:rgba(0,0,0,0.7);
+color:#0ff;
+padding:8px 15px;
+border:1px solid #0ff;
+border-radius:10px;
+font-size:14px;
+display:none;
+z-index:50;
+}
+</style>
+</head>
+
+<body>
+
+<div id="hud">
+Score: <span id="score">0</span> |
+High: <span id="high">0</span>
+</div>
+
+<div id="topBtns">
+<button onclick="goHome()">NEON HUB</button>
+<button onclick="stopGame()">STOP</button>
+</div>
+
+<canvas id="game"></canvas>
+
+<!-- HOME MENU -->
+<div id="menu" class="screen">
+<h1>NEON HUB</h1>
+
+<div>Choose Your Orb</div>
+
+<div class="skins">
+<div class="skin active" id="s1" style="background:#0ff" onclick="setSkin('#0ff','s1')"></div>
+<div class="skin" id="s2" style="background:#f0f" onclick="setSkin('#f0f','s2')"></div>
+<div class="skin" id="s3" style="background:#ff0" onclick="setSkin('#ff0','s3')"></div>
+<div class="skin" id="s4" style="background:#00ff88" onclick="setSkin('#00ff88','s4')"></div>
+<div class="skin" id="s5" style="background:#ff4d4d" onclick="setSkin('#ff4d4d','s5')"></div>
+</div>
+
+<button onclick="startGame()">START GAME</button>
+</div>
+
+<!-- GAME OVER -->
+<div id="over" class="screen" style="display:none;">
+<h1>OUT</h1>
+<div id="result"></div>
+<button onclick="goHome()">BACK TO HUB</button>
+</div>
+
+<div id="skinMsg">Skin Selected!</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+canvas.width = 400;
+canvas.height = 600;
+
+let bird, pipes, score, frame, gameOver;
+let skin = "#0ff";
+let running = false;
+
+let highScore = localStorage.getItem("high") || 0;
+document.getElementById("high").innerText = highScore;
+
+/* SKIN SELECT */
+function setSkin(c,id){
+skin = c;
+
+// active UI
+document.querySelectorAll(".skin").forEach(s=>{
+s.classList.remove("active");
+});
+document.getElementById(id).classList.add("active");
+
+// message
+let msg = document.getElementById("skinMsg");
+msg.style.display = "block";
+msg.innerText = "Skin Selected!";
+
+// glow
+ctx.shadowBlur = 30;
+ctx.shadowColor = c;
+
+setTimeout(()=>{
+msg.style.display = "none";
+ctx.shadowBlur = 0;
+},1000);
+}
+
+/* INIT */
+function init(){
+bird = {x:80,y:250,r:15,velocity:0};
+pipes = [];
+score = 0;
+frame = 0;
+gameOver = false;
+running = true;
+
+document.getElementById("score").innerText=0;
+document.getElementById("over").style.display="none";
+document.getElementById("menu").style.display="none";
+}
+
+/* START */
+function startGame(){
+init();
+loop();
+}
+
+/* HOME */
+function goHome(){
+running = false;
+gameOver = true;
+
+document.getElementById("menu").style.display="flex";
+document.getElementById("over").style.display="none";
+}
+
+/* STOP */
+function stopGame(){
+running = false;
+}
+
+/* FLAP */
+function flap(){
+if(!gameOver && running){
+bird.velocity = -8;
+}
+}
+
+document.addEventListener("keydown", e=>{
+if(e.code==="Space") flap();
+});
+
+document.addEventListener("touchstart", ()=>{
+if(gameOver) goHome();
+else flap();
+});
+
+/* PIPE */
+function pipe(){
+let gap = 140;
+let top = Math.random()*(canvas.height/2);
+
+pipes.push({
+x:canvas.width,
+top:top,
+gap:gap,
+w:50,
+passed:false
+});
+}
+
+/* LOOP */
+function loop(){
+
+if(!running) return;
+
+ctx.clearRect(0,0,canvas.width,canvas.height);
+
+ctx.shadowBlur = 25;
+ctx.shadowColor = skin;
+
+/* bird */
+bird.velocity += 0.5;
+bird.y += bird.velocity;
+
+ctx.fillStyle = skin;
+ctx.beginPath();
+ctx.arc(bird.x,bird.y,bird.r,0,Math.PI*2);
+ctx.fill();
+
+ctx.shadowBlur = 0;
+
+/* pipes */
+if(frame % 90 === 0) pipe();
+
+for(let i=0;i<pipes.length;i++){
+let p = pipes[i];
+p.x -= 2;
+
+ctx.fillStyle="#ff00ff";
+ctx.fillRect(p.x,0,p.w,p.top);
+ctx.fillRect(p.x,p.top+p.gap,p.w,canvas.height);
+
+/* collision */
+if(
+bird.x + bird.r > p.x &&
+bird.x - bird.r < p.x + p.w &&
+(bird.y - bird.r < p.top || bird.y + bird.r > p.top + p.gap)
+){
+endGame();
+}
+
+/* score */
+if(!p.passed && p.x + p.w < bird.x){
+score++;
+p.passed = true;
+document.getElementById("score").innerText=score;
+}
+}
+
+pipes = pipes.filter(p=>p.x>-60);
+
+if(bird.y>canvas.height || bird.y<0){
+endGame();
+}
+
+frame++;
+requestAnimationFrame(loop);
+}
+
+/* GAME OVER */
+function endGame(){
+gameOver = true;
+running = false;
+
+document.getElementById("over").style.display="flex";
+
+if(score > highScore){
+highScore = score;
+localStorage.setItem("high", highScore);
+document.getElementById("high").innerText = highScore;
+}
+
+document.getElementById("result").innerHTML =
+"Score: "+score+"<br>High Score: "+highScore;
+}
+</script>
+
+</body>
+</html>
