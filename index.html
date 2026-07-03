@@ -151,6 +151,10 @@ z-index:50;
 
 <body>
 
+<audio id="menuMusic" src="audio/S_gmae.mp3" loop></audio>
+<audio id="gameMusic" src="audio/c_game.mp3" loop></audio>
+<audio id="overMusic" src="audio/gameOver.mp3"></audio>
+
 <div id="hud">
 Score: <span id="score">0</span> |
 High: <span id="high">0</span>
@@ -203,6 +207,18 @@ let running = false;
 let highScore = localStorage.getItem("high") || 0;
 document.getElementById("high").innerText = highScore;
 
+const menuMusic = document.getElementById("menuMusic");
+const gameMusic = document.getElementById("gameMusic");
+const overMusic = document.getElementById("overMusic");
+
+menuMusic.volume = 0.5;
+gameMusic.volume = 0.5;
+overMusic.volume = 0.8;
+
+window.addEventListener("load", () => {
+    menuMusic.play().catch(()=>{});
+});
+
 /* SKIN SELECT */
 function setSkin(c,id){
 skin = c;
@@ -244,14 +260,32 @@ document.getElementById("menu").style.display="none";
 
 /* START */
 function startGame(){
+
+menuMusic.pause();
+menuMusic.currentTime = 0;
+
+overMusic.pause();
+overMusic.currentTime = 0;
+
+gameMusic.play().catch(()=>{});
+
 init();
 loop();
 }
 
 /* HOME */
 function goHome(){
+
 running = false;
 gameOver = true;
+
+gameMusic.pause();
+gameMusic.currentTime = 0;
+
+overMusic.pause();
+overMusic.currentTime = 0;
+
+menuMusic.play().catch(()=>{});
 
 document.getElementById("menu").style.display="flex";
 document.getElementById("over").style.display="none";
@@ -259,7 +293,12 @@ document.getElementById("over").style.display="none";
 
 /* STOP */
 function stopGame(){
+
 running = false;
+
+gameMusic.pause();
+
+menuMusic.play().catch(()=>{});
 }
 
 /* FLAP */
@@ -353,6 +392,13 @@ requestAnimationFrame(loop);
 
 /* GAME OVER */
 function endGame(){
+    
+    gameMusic.pause();
+gameMusic.currentTime = 0;
+
+overMusic.currentTime = 0;
+overMusic.play().catch(()=>{});
+
 gameOver = true;
 running = false;
 
@@ -366,7 +412,10 @@ document.getElementById("high").innerText = highScore;
 
 document.getElementById("result").innerHTML =
 "Score: "+score+"<br>High Score: "+highScore;
+
+
 }
+
 </script>
 
 </body>
